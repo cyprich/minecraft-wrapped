@@ -1,14 +1,12 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+mod insert;
+mod manager;
+mod select;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use insert::*;
+pub use manager::*;
+pub use select::*;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+mod models;
+
+pub(crate) type Pool = sqlx::Pool<sqlx::Postgres>;
+pub(crate) type Builder = sqlx::QueryBuilder<sqlx::Postgres>;

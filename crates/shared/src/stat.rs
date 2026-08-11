@@ -1,14 +1,16 @@
 //! This module contains the PlayerStats struct  
 
+use std::fmt::Display;
+
 /// Stat contains one statistic, which is:
 /// - category: `mined`
 /// - name: `cobblestone`
 /// - value: 123
 #[derive(Debug)]
 pub struct Stat {
-    category: StatCategory,
-    name: String,
-    value: u32,
+    pub category: StatCategory,
+    pub name: String,
+    pub value: u32,
 }
 
 impl Stat {
@@ -29,7 +31,7 @@ pub enum StatCategory {
     Dropped,
     Killed,
     Mined,
-    PickedUp,
+    Picked,
     Used,
 }
 
@@ -46,9 +48,25 @@ impl StatCategory {
             "dropped" => Some(Self::Dropped),
             "killed" => Some(Self::Killed),
             "mined" => Some(Self::Mined),
-            "pickedup" => Some(Self::PickedUp),
+            "pickedup" => Some(Self::Picked),
             "used" => Some(Self::Used),
             _ => None,
         }
+    }
+}
+
+impl Display for StatCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let val = match self {
+            StatCategory::Crafted => "crafted",
+            StatCategory::Custom => "custom",
+            StatCategory::Dropped => "dropped",
+            StatCategory::Killed => "killed",
+            StatCategory::Mined => "mined",
+            StatCategory::Picked => "picked",
+            StatCategory::Used => "used",
+        };
+
+        write!(f, "{}", val)
     }
 }

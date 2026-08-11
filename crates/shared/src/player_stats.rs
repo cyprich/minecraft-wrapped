@@ -2,7 +2,9 @@
 
 use std::fmt::Debug;
 
+use anyhow::Context;
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 use crate::{RawPlayerStats, Stat, StatCategory};
 
@@ -11,23 +13,30 @@ use crate::{RawPlayerStats, Stat, StatCategory};
 /// - datetime of stats
 /// - stats - vector of `shared::Stat`, which is actual key-value-like struct
 pub struct PlayerStats {
-    pub player: String,
+    pub player_uuid: Uuid,
     pub stats: Vec<Stat>,
     pub datetime: NaiveDateTime,
 }
 
 impl PlayerStats {
-    pub fn new(player: String, stats: Vec<Stat>, datetime: NaiveDateTime) -> Self {
-        Self {
-            player,
+    pub fn new(
+        player_uuid: String,
+        stats: Vec<Stat>,
+        datetime: NaiveDateTime,
+    ) -> anyhow::Result<Self> {
+        let player_uuid = Uuid::parse_str(&player_uuid)
+            .context(format!("Failed to parse '{}' to uuid", player_uuid))?;
+
+        Ok(Self {
+            player_uuid,
             stats,
             datetime,
-        }
+        })
     }
 }
 
-impl From<RawPlayerStats> for PlayerStats {
-    fn from(value: RawPlayerStats) -> Self {
+impl PlayerStats {
+    pub fn from_raw(value: RawPlayerStats) -> anyhow::Result<Self> {
         // the json from minecraft looks something like this:
         //
         //  {
@@ -80,11 +89,7 @@ impl From<RawPlayerStats> for PlayerStats {
             }
         }
 
-        Self {
-            player: value.player,
-            stats,
-            datetime: value.datetime,
-        }
+        Self::new(value.player_uuid, stats, value.datetime)
     }
 }
 
@@ -92,7 +97,7 @@ impl Debug for PlayerStats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let length = format!("{} values", &self.stats.len());
         f.debug_struct("PlayerStats")
-            .field("player", &self.player)
+            .field("player_name", &self.player_uuid)
             .field("stats", &length)
             .field("datetime", &self.datetime)
             .finish()
