@@ -19,7 +19,6 @@ impl Importer {
     /// Reads stats of multiple players from multiple days
     ///
     /// Expected structure of input folder:
-    ///
     /// ```
     /// folder  
     /// ├── 20260101-050000
@@ -79,7 +78,6 @@ impl Importer {
     /// Reads stats of multiple players from one day
     ///
     /// Expected structure of input folder:
-    ///
     /// ```
     /// 20260101-050000
     /// ├── uuid1.json
