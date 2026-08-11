@@ -1,14 +1,38 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use std::fmt::Debug;
+
+use chrono::NaiveDateTime;
+
+pub const DATETIME_FORMAT: &str = "%Y%m%d-%H%M%S";
+pub const DATETIME_FORMAT_DISPLAY: &str = "YYYYMMDD-HHMMSS";
+
+pub struct RawPlayerStats {
+    // TODO: name or UUID?
+    player: String,
+    stats: String,
+    datetime: NaiveDateTime,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl RawPlayerStats {
+    pub fn new(player: String, stats: String, datetime: NaiveDateTime) -> Self {
+        Self {
+            player,
+            stats,
+            datetime,
+        }
+    }
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    pub fn temp_simplify(&mut self) {
+        self.stats = self.stats.replace("\n", "").replace(" ", "");
+    }
+}
+
+impl Debug for RawPlayerStats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let length = format!("{} bytes", &self.stats.len());
+        f.debug_struct("RawPlayerStats")
+            .field("player", &self.player)
+            .field("stats", &length)
+            .field("datetime", &self.datetime)
+            .finish()
     }
 }
