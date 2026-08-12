@@ -25,7 +25,7 @@ pub async fn insert_player_stats(manager: &Manager, stats: Vec<PlayerStats>) -> 
         .fetch_all(&manager.pool)
         .await?;
 
-    // key: uuid; value: id
+    // key: uuid, value: id
     let mut player_map = HashMap::new();
     for p in players {
         player_map.entry(p.uuid).or_insert(p.id);

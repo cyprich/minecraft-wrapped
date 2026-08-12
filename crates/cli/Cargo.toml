@@ -4,10 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.104"
+# my libraries
 importer = { path = "../importer/" }
-log = "0.4.33"
-simple_logger = "5.2.0"
 shared = { path = "../shared/" }
 db = { path = "../db/" }
+charter = { path = "../charter/" }
+# external libraries
+anyhow = "1.0.104"
+log = "0.4.33"
+simple_logger = "5.2.0"
 tokio = { version = "1.53.1", features = ["full"] }

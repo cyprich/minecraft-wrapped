@@ -33,6 +33,14 @@ impl PlayerStats {
             datetime,
         })
     }
+
+    pub fn from_uuid(player_uuid: Uuid, stats: Vec<Stat>, datetime: NaiveDateTime) -> Self {
+        Self {
+            player_uuid,
+            stats,
+            datetime,
+        }
+    }
 }
 
 impl PlayerStats {
