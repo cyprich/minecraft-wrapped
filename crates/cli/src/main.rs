@@ -16,12 +16,20 @@ async fn main() -> anyhow::Result<()> {
     let snapshots = db::select_player_snapshots(&db_manager).await?;
     info!("Loaded {} PlayerSnapshots", snapshots.len());
 
+    // render playtime chart
     let playtime = extractor::player_playtime(&snapshots);
+    if let Err(e) = charter::player_series("playtime.svg", "Playtime", &playtime) {
+        error!("Error while rendering chart: {}", e);
+    } else {
+        info!("Chart succesfully rendered");
+    }
 
-    let result = charter::player_playtime(&playtime);
-    match result {
-        Ok(_) => info!("Chart succesfully rendered"),
-        Err(e) => error!("Error while rendering charts: {}", e),
+    // render totems chart
+    let totems = extractor::player_totems(&snapshots);
+    if let Err(e) = charter::player_series("totems.svg", "Used Totems of Undying", &totems) {
+        error!("Error while rendering chart: {}", e);
+    } else {
+        info!("Chart succesfully rendered");
     }
 
     Ok(())

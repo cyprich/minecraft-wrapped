@@ -9,32 +9,6 @@
 
 // TODO: this crate might not be necessary, if i did it in database
 
-use std::collections::HashMap;
+mod player_series;
 
-use shared::{DataPoint, PlayerSeries, PlayerSnapshot};
-use uuid::Uuid;
-
-pub fn player_playtime(snapshots: &Vec<PlayerSnapshot>) -> Vec<PlayerSeries> {
-    // key: player uuid, value: vector of datapoints
-    let mut result: HashMap<Uuid, Vec<DataPoint>> = HashMap::new();
-
-    for snapshot in snapshots {
-        let Some(stat) = snapshot.stats.iter().find(|stat| stat.name == "play_time") else {
-            continue;
-        };
-
-        result
-            .entry(snapshot.player_uuid)
-            .or_default()
-            .push(DataPoint::new(snapshot.datetime, stat.value))
-    }
-
-    result
-        .into_iter()
-        .map(|(player_uuid, mut data_points)| {
-            // sort by datetime
-            data_points.sort_by_key(|point| point.x);
-            PlayerSeries::new(player_uuid, data_points)
-        })
-        .collect::<Vec<_>>()
-}
+pub use player_series::*;

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 /// Enum of categories of stats in Minecraft
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum StatCategory {
     Crafted,
     Custom,
