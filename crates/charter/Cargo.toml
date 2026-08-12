@@ -1,0 +1,9 @@
+[package]
+name = "charter"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+log = "0.4.33"
+plotters = "0.3.7"

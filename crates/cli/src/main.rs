@@ -1,12 +1,15 @@
 //! This is the command line interface for minecraft-wrapped
 
-use std::{collections::HashSet, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Instant,
+};
 
 use anyhow::Context;
 use charter::Charter;
 use importer::Importer;
-use log::{error, info};
-use shared::PlayerStats;
+use log::{error, info, trace};
+use shared::{PlayerStats, StatCategory};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -86,10 +89,90 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    info!("Loaded {} PlayerStats: {:?}", stats.len(), stats);
+    info!("Loaded {} PlayerStats", stats.len());
+    // info!("PlayerStats: {:?}", stats);
 
-    // charts
+    // sample chart
     let result = Charter::sample_chart();
+    match result {
+        Ok(_) => info!("Chart succesfully rendered"),
+        Err(e) => error!("Error while rendering charts: {}", e),
+    }
+
+    // TODO: fuck this tho, i need to use just db::models::Stat
+
+    // group stats by player
+    // key: player_uuid, value: (datetime, Vec<Stat>)
+    let mut stats_map = HashMap::new();
+    for stat in stats.iter().filter(|player_stats| {
+        player_stats.stats.iter().filter(|stat| {
+            matches!(stat.category, StatCategory::Custom) && stat.name == "play_time"
+        })
+    }) {
+        stats_map
+            .entry(stat.player_uuid)
+            .or_insert_with(|| (stat.datetime, &stat.stats));
+    }
+
+    // playtime chart
+    // let playtimes = stats
+    //     .iter()
+    //     .filter_map(|player_stat| {
+    //         let caption = player_stat.player_uuid.to_string();
+    //         let datapoints = player_stat
+    //             .stats
+    //             .iter()
+    //             .enumerate()
+    //             .filter_map(|(n, stat)| {
+    //                 if matches!(stat.category, StatCategory::Custom) && stat.name == "play_time" {
+    //                     // trace!("Stat: {}::{}::{}", caption, n, stat.value);
+    //                     Some((n as f64, stat.value as f64))
+    //                 } else {
+    //                     None
+    //                 }
+    //             })
+    //             .collect::<Vec<_>>();
+    //
+    //         if !datapoints.is_empty() {
+    //             // info!("Got {} datapoints", datapoints.len());
+    //             Some((datapoints, caption))
+    //         } else {
+    //             None
+    //         }
+    //     })
+    //     .collect();
+
+    // playtimes
+    let playtimes = stats_map
+        .iter()
+        .filter_map(|(k, v)| {
+            let datapoints = v
+                .1
+                .iter()
+                .enumerate()
+                .filter_map(|(n, stat)| {
+                    if matches!(stat.category, StatCategory::Custom) && stat.name == "play_time" {
+                        Some((n as f64, stat.value as f64))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            let caption = k.to_string();
+
+            if !datapoints.is_empty() {
+                Some((datapoints, caption))
+            } else {
+                None
+            }
+
+            // let values = v.1.iter().filter(|stat| {
+            //     matches!(stat.category, StatCategory::Custom) && stat.name == "play_time"
+            // }).collect();
+        })
+        .collect::<Vec<_>>();
+
+    let result = Charter::render_lines("playtimes.svg", "Playtimes", playtimes);
     match result {
         Ok(_) => info!("Chart succesfully rendered"),
         Err(e) => error!("Error while rendering charts: {}", e),
