@@ -9,6 +9,7 @@ importer = { path = "../importer/" }
 shared = { path = "../shared/" }
 db = { path = "../db/" }
 charter = { path = "../charter/" }
+extractor = { path = "../extractor/" }
 # external libraries
 anyhow = "1.0.104"
 log = "0.4.33"

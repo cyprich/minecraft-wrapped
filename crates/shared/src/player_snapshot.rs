@@ -6,22 +6,24 @@ use anyhow::Context;
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 
-use crate::{RawPlayerStats, Stat, StatCategory};
+use crate::{PlayerSnapshotJson, StatCategory, StatValue};
 
-/// RawPlayerStats contains:
-/// - Player name/UUID
-/// - datetime of stats
-/// - stats - vector of `shared::Stat`, which is actual key-value-like struct
-pub struct PlayerStats {
+/// PlayerSnapshot represents all stats belonging to one player at one point in time:
+///
+/// The structure is
+/// - player UUID
+/// - datetime
+/// - stats - vector of `shared::StatValue`, which is actual key-value-like struct
+pub struct PlayerSnapshot {
     pub player_uuid: Uuid,
-    pub stats: Vec<Stat>,
+    pub stats: Vec<StatValue>,
     pub datetime: NaiveDateTime,
 }
 
-impl PlayerStats {
+impl PlayerSnapshot {
     pub fn new(
         player_uuid: String,
-        stats: Vec<Stat>,
+        stats: Vec<StatValue>,
         datetime: NaiveDateTime,
     ) -> anyhow::Result<Self> {
         let player_uuid = Uuid::parse_str(&player_uuid)
@@ -34,7 +36,7 @@ impl PlayerStats {
         })
     }
 
-    pub fn from_uuid(player_uuid: Uuid, stats: Vec<Stat>, datetime: NaiveDateTime) -> Self {
+    pub fn from_uuid(player_uuid: Uuid, stats: Vec<StatValue>, datetime: NaiveDateTime) -> Self {
         Self {
             player_uuid,
             stats,
@@ -43,8 +45,12 @@ impl PlayerStats {
     }
 }
 
-impl PlayerStats {
-    pub fn from_raw(value: RawPlayerStats) -> anyhow::Result<Self> {
+impl PlayerSnapshot {
+    /// Tries to convert `PlayerSnapshotJson` to `PlayerSnapshot`
+    ///
+    /// Uses `serde_json` library to read the JSON string,
+    /// and tries to convert it to `shared::StatValue` struct
+    pub fn from_raw(value: PlayerSnapshotJson) -> anyhow::Result<Self> {
         // the json from minecraft looks something like this:
         //
         //  {
@@ -66,7 +72,7 @@ impl PlayerStats {
         //      "DataVersion": 1234
         //  }
 
-        let mut stats: Vec<Stat> = Vec::new();
+        let mut stats: Vec<StatValue> = Vec::new();
         let raw: serde_json::Value = serde_json::from_str(&value.json).unwrap();
 
         // get only the `stats` part
@@ -91,7 +97,7 @@ impl PlayerStats {
 
                         let name = stat_name.replace("minecraft:", "");
 
-                        stats.push(Stat::new(category, name.clone(), value));
+                        stats.push(StatValue::new(category, name.clone(), value));
                     }
                 }
             }
@@ -101,7 +107,7 @@ impl PlayerStats {
     }
 }
 
-impl Debug for PlayerStats {
+impl Debug for PlayerSnapshot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let length = format!("{} values", &self.stats.len());
         f.debug_struct("PlayerStats")

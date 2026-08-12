@@ -1,29 +1,6 @@
-//! This module contains the PlayerStats struct  
-
 use std::fmt::Display;
 
-/// Stat contains one statistic, which is:
-/// - category: `mined`
-/// - name: `cobblestone`
-/// - value: 123
-#[derive(Debug)]
-pub struct Stat {
-    pub category: StatCategory,
-    pub name: String,
-    pub value: u32,
-}
-
-impl Stat {
-    pub fn new(category: StatCategory, name: String, value: u32) -> Self {
-        Self {
-            category,
-            name,
-            value,
-        }
-    }
-}
-
-/// Categories of stats in Minecraft
+/// Enum of categories of stats in Minecraft
 #[derive(Debug)]
 pub enum StatCategory {
     Crafted,

@@ -1,3 +1,5 @@
+//! The `reporter` crate is responsible for creating monthly/annual reports in PDF format
+
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }

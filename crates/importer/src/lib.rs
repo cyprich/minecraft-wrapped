@@ -1,4 +1,4 @@
-//! This crate contains struct, which is responsible for importing stats from files
+//! The `importer` crate responsible for importing stats from files
 //!
 //! Stats are just read as `shared::RawJsonStats`,
 //! meaning the stats themselves are not parsed into structs,
@@ -7,7 +7,7 @@ use std::{fs, path::Path};
 
 use anyhow::Context;
 use log::{error, warn};
-use shared::RawPlayerStats;
+use shared::PlayerSnapshotJson;
 
 /// Reads raw stats from files
 ///
@@ -31,7 +31,7 @@ impl Importer {
     /// │   └── uuid3.json
     /// └── ...
     /// ```
-    pub fn batch(folder: impl AsRef<Path>) -> anyhow::Result<Vec<RawPlayerStats>> {
+    pub fn batch(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSnapshotJson>> {
         let folder = folder.as_ref();
 
         if !fs::exists(folder).unwrap_or(false) {
@@ -84,7 +84,7 @@ impl Importer {
     /// ├── uuid2.json
     /// └── uuid3.json
     /// ```
-    pub fn simple(folder: impl AsRef<Path>) -> anyhow::Result<Vec<RawPlayerStats>> {
+    pub fn simple(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSnapshotJson>> {
         let folder = folder.as_ref();
 
         // check if folder exists
@@ -156,7 +156,7 @@ impl Importer {
                 Some((stats, player_name))
             })
             // construct RawPlayerStats
-            .map(|(stats, player_name)| RawPlayerStats::new(player_name, stats, datetime))
+            .map(|(stats, player_name)| PlayerSnapshotJson::new(player_name, stats, datetime))
             .collect::<Vec<_>>();
 
         Ok(result)

@@ -1,6 +1,6 @@
 use sqlx::types::chrono::NaiveDateTime;
 
-pub struct Stats {
+pub struct StatRow {
     pub player_id: i32,
     pub timestamp: NaiveDateTime,
     pub category: String,

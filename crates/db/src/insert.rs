@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use log::{error, info};
-use shared::PlayerStats;
+use shared::PlayerSnapshot;
 use sqlx::{query_as, query_scalar, types::Uuid};
 
 use crate::{Manager, models::Player};
@@ -20,7 +20,10 @@ pub async fn insert_player(manager: &Manager, name: &str, uuid: &Uuid) -> anyhow
 }
 
 // TODO: make the parameter `Vec<&PlayerStats>`?
-pub async fn insert_player_stats(manager: &Manager, stats: Vec<PlayerStats>) -> anyhow::Result<()> {
+pub async fn insert_player_snapshots(
+    manager: &Manager,
+    stats: Vec<PlayerSnapshot>,
+) -> anyhow::Result<()> {
     let players = query_as!(Player, "select * from players")
         .fetch_all(&manager.pool)
         .await?;

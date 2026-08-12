@@ -1,11 +1,10 @@
 [package]
-name = "charter"
+name = "extractor"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
-chrono = "0.4.45"
 log = "0.4.33"
-plotters = "0.3.7"
 shared = { path = "../shared/" }
+uuid = "1.24.0"

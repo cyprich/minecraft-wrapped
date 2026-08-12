@@ -1,112 +1,118 @@
+//! The `charter` crate is responsible for generating/drawing charts
+
 use std::{ops::Range, path::Path};
 
-use plotters::{prelude::*, style};
+use chrono::NaiveDateTime;
+use plotters::prelude::*;
+use shared::PlayerSeries;
 
-pub struct Charter {}
+use crate::models::Line;
 
-impl Charter {
-    pub fn sample_chart() -> anyhow::Result<()> {
-        // let root = BitMapBackend::new("sample_chart.png", (1920, 1080)).into_drawing_area();
-        let root = SVGBackend::new("sample_chart.svg", (1920, 1080)).into_drawing_area();
-        root.fill(&WHITE)?;
+mod models;
 
-        const X_SPEC: Range<f64> = 0.0..10.0;
-        const Y_SPEC: Range<f64> = -1.1..1.1;
+pub fn sample_chart() -> anyhow::Result<()> {
+    // let root = BitMapBackend::new("sample_chart.png", (1920, 1080)).into_drawing_area();
+    let root = SVGBackend::new("sample_chart.svg", (1920, 1080)).into_drawing_area();
+    root.fill(&WHITE)?;
 
-        // chart context
-        let mut ctx = ChartBuilder::on(&root)
-            // caption/title
-            .caption("This is sample chart", ("Arial", 32))
-            // y axis on the left
-            .set_label_area_size(LabelAreaPosition::Left, 60)
-            // x axis on the bottom
-            .set_label_area_size(LabelAreaPosition::Bottom, 30)
-            .build_cartesian_2d(X_SPEC, Y_SPEC)?;
+    const X_SPEC: Range<f64> = 0.0..10.0;
+    const Y_SPEC: Range<f64> = -1.1..1.1;
 
-        ctx.configure_mesh().draw()?;
+    // chart context
+    let mut ctx = ChartBuilder::on(&root)
+        // caption/title
+        .caption("This is sample chart", ("Arial", 32))
+        // y axis on the left
+        .set_label_area_size(LabelAreaPosition::Left, 60)
+        // x axis on the bottom
+        .set_label_area_size(LabelAreaPosition::Bottom, 30)
+        .build_cartesian_2d(X_SPEC, Y_SPEC)?;
 
-        // draw stuff
-        ctx.draw_series(LineSeries::new(
-            (0..1000).map(|i| {
-                let i = (i as f64) / 100.0;
-                (i, i.sin())
-            }),
-            &RED,
-        ))?;
+    ctx.configure_mesh().draw()?;
 
-        Ok(())
-    }
+    // draw stuff
+    ctx.draw_series(LineSeries::new(
+        (0..1000).map(|i| {
+            let i = (i as f64) / 100.0;
+            (i, i.sin())
+        }),
+        &RED,
+    ))?;
 
-    /// Render Line chart with multiple lines
-    ///
-    /// You can image the `lines` parameter as this:
-    /// ```
-    /// Lines {
-    ///     Vec<Line {
-    ///         Vec<Data {
-    ///             x: f64,
-    ///             y: f64
-    ///         }>,
-    ///         style: impl Into<plotters::ShapeStyle>,  # color, stroke width, ...
-    ///         description: &str
-    ///     }>
-    /// }
-    /// ```
-    ///
-    /// ...basically vector of lines;
-    /// `Line` consists of `description`, `style` (color) and a bunch of `x, y` pairs
-    pub fn render_lines(
-        path: impl AsRef<Path>,
-        caption: &str,
-        // lines: Vec<(Vec<(f64, f64)>, String, impl Into<ShapeStyle>)>,
-        lines: Vec<(Vec<(f64, f64)>, String)>,
-    ) -> anyhow::Result<()> {
-        let root = SVGBackend::new(path.as_ref(), (1920, 1080)).into_drawing_area();
-        root.fill(&WHITE)?;
+    Ok(())
+}
 
-        // create x_spec and y_spec
-        let (x_min, x_max, y_min, y_max) = lines.iter().flat_map(|l| &l.0).fold(
-            // we are starting with these accumulator values, which will be updated
-            (
-                f64::INFINITY,
-                f64::NEG_INFINITY,
-                f64::INFINITY,
-                f64::NEG_INFINITY,
-            ),
-            // `|(current_accumulator_values), (current_iterator_values)|`
-            // if x_min < x, update it,
-            // if x_max > x, update it, ...
-            |(x_min, x_max, y_min, y_max), &(x, y)| {
-                (x_min.min(x), x_max.max(x), y_min.min(y), y_max.max(y))
-            },
-        );
+/// Render Line chart with multiple lines
+/// **Expects `lines` to be sorted by datetime!**
+fn render_lines(
+    path: impl AsRef<Path>,
+    caption: &str,
+    // lines: Vec<(Vec<(f64, f64)>, String, impl Into<ShapeStyle>)>,
+    lines: &[Line],
+) -> anyhow::Result<()> {
+    let root = SVGBackend::new(path.as_ref(), (1920, 1080)).into_drawing_area();
+    root.fill(&WHITE)?;
 
-        let x_spec = x_min..x_max;
-        let y_spec = y_min..y_max;
-
-        // chart context
-        let mut ctx = ChartBuilder::on(&root)
-            // caption/title
-            .caption(caption, ("Arial", 32))
-            // y axis on the left
-            .set_label_area_size(LabelAreaPosition::Left, 60)
-            // x axis on the bottom
-            .set_label_area_size(LabelAreaPosition::Bottom, 30)
-            .build_cartesian_2d(x_spec, y_spec)?;
-
-        ctx.configure_mesh().draw()?;
-
-        // for (datapoints, description, style) in lines {
-        for (datapoints, description) in lines {
-            let color = &BLACK;
-            ctx.draw_series(LineSeries::new(datapoints, color))?
-                .label(description)
-                .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color));
+    // create x_spec and y_spec
+    let mut min_time = NaiveDateTime::MAX;
+    let mut max_time = NaiveDateTime::MIN;
+    let mut max_value: f64 = 0.0;
+    for line in lines.iter() {
+        for &(date, value) in &line.data {
+            max_time = max_time.max(date);
+            min_time = min_time.min(date);
+            max_value = max_value.max(value);
         }
-
-        // TODO: what does this do?
-        root.present()?;
-
-        Ok(())
     }
+
+    let x_spec = RangedDateTime::from(min_time..max_time);
+    let y_spec = 0.0..max_value;
+
+    // chart context
+    let mut ctx = ChartBuilder::on(&root)
+        // caption/title
+        .caption(caption, ("Arial", 32))
+        // y axis on the left
+        .set_label_area_size(LabelAreaPosition::Left, 60)
+        // x axis on the bottom
+        .set_label_area_size(LabelAreaPosition::Bottom, 30)
+        .build_cartesian_2d(x_spec, y_spec)?;
+
+    ctx.configure_mesh().draw()?;
+
+    // for (datapoints, description, style) in lines {
+    for line in lines {
+        ctx.draw_series(LineSeries::new(
+            line.data.iter().map(|(date, value)| (*date, *value)),
+            line.style,
+        ))?
+        .label(&line.description)
+        .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], line.style));
+    }
+
+    // TODO: what does this do?
+    root.present()?;
+
+    Ok(())
+}
+
+pub fn player_playtime(data: &[PlayerSeries]) -> anyhow::Result<()> {
+    let colors = [&RED, &GREEN, &BLUE, &CYAN, &MAGENTA, &YELLOW, &BLACK];
+    let mut i = 0;
+
+    let lines = data
+        .iter()
+        .map(|data| {
+            let description = format!("player {}", data.player_uuid);
+            let data_points = data.data_points.iter().map(|p| (p.x, p.y as f64)).collect();
+
+            let result = Line::new(data_points, &description, colors[i % colors.len()].into());
+            i += 1;
+            result
+        })
+        .collect::<Vec<_>>();
+
+    crate::render_lines("playtime.svg", "Playtime for each player", &lines)?;
+
+    Ok(())
 }

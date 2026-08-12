@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use log::{trace, warn};
-use shared::{PlayerStats, StatCategory};
+use shared::{PlayerSnapshot, StatCategory};
 use sqlx::{query_as, query_scalar};
 
 use crate::Manager;
-use crate::models::Stats;
+use crate::models::StatRow;
 
-pub async fn select_player_stats(manager: &Manager) -> anyhow::Result<Vec<PlayerStats>> {
+pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<PlayerSnapshot>> {
     // this will be needed later, but there is no need to continue if this fails
     let players = query_as!(crate::models::Player, "select * from players")
         .fetch_all(&manager.pool)
@@ -32,7 +32,7 @@ pub async fn select_player_stats(manager: &Manager) -> anyhow::Result<Vec<Player
 
     while CHUNK_SIZE + offset < count {
         let stats_chunk = query_as!(
-            Stats,
+            StatRow,
             "select * from stats limit $1 offset $2",
             CHUNK_SIZE,
             offset
@@ -62,7 +62,11 @@ pub async fn select_player_stats(manager: &Manager) -> anyhow::Result<Vec<Player
         stat_map
             .entry((stat.player_id, stat.timestamp))
             .or_insert(Vec::new())
-            .push(shared::Stat::new(category, stat.name, stat.value as u32));
+            .push(shared::StatValue::new(
+                category,
+                stat.name,
+                stat.value as u32,
+            ));
     }
 
     trace!("HashMap constructed");
@@ -77,7 +81,7 @@ pub async fn select_player_stats(manager: &Manager) -> anyhow::Result<Vec<Player
                     return None;
                 }
             };
-            Some(PlayerStats::from_uuid(*uuid, stats, datetime))
+            Some(PlayerSnapshot::from_uuid(*uuid, stats, datetime))
         })
         .collect::<Vec<_>>();
 
