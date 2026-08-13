@@ -64,7 +64,7 @@ pub fn player_playtime(snapshots: &[PlayerSnapshot]) -> Vec<PlayerSeries> {
         .collect()
 }
 
-pub fn player_totems(snapshots: &Vec<PlayerSnapshot>) -> Vec<PlayerSeries> {
+pub fn player_totems(snapshots: &[PlayerSnapshot]) -> Vec<PlayerSeries> {
     filter_snapshots(
         snapshots,
         Some("totem_of_undying"),

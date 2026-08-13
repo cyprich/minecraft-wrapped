@@ -42,6 +42,8 @@ pub async fn insert_player_snapshots(
 
     const CHUNK_SIZE: usize = 512;
 
+    let mut inserted = 0;
+
     for player_stats in stats {
         let timestamp = player_stats.datetime;
         if let Some(id) = player_map.get(&player_stats.player_uuid) {
@@ -58,12 +60,15 @@ pub async fn insert_player_snapshots(
                         .push_bind(stat.value as i32);
                 });
 
+                builder.push(" on conflict do nothing");
+
                 let result = builder.build().execute(&mut *tx).await;
 
                 if let Err(e) = result {
                     error!("Failed inserting player stats in database: {}", e);
                 } else {
-                    info!("Inserted {} stats", CHUNK_SIZE);
+                    inserted += CHUNK_SIZE;
+                    info!("Inserted {} stats", inserted);
                 }
             }
         } else {

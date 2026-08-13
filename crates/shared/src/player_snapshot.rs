@@ -4,6 +4,7 @@ use std::fmt::Debug;
 
 use anyhow::Context;
 use chrono::NaiveDateTime;
+use log::{error, trace};
 use uuid::Uuid;
 
 use crate::{PlayerSnapshotJson, StatCategory, StatValue};
@@ -51,6 +52,12 @@ impl PlayerSnapshot {
     /// Uses `serde_json` library to read the JSON string,
     /// and tries to convert it to `shared::StatValue` struct
     pub fn from_raw(value: PlayerSnapshotJson) -> anyhow::Result<Self> {
+        // return empty
+        if value.json.is_empty() {
+            trace!("Returning empty PlayerSnapshot: {:?}", value);
+            return Self::new(value.player_uuid, Vec::new(), value.datetime);
+        }
+
         // the json from minecraft looks something like this:
         //
         //  {
@@ -73,7 +80,13 @@ impl PlayerSnapshot {
         //  }
 
         let mut stats: Vec<StatValue> = Vec::new();
-        let raw: serde_json::Value = serde_json::from_str(&value.json).unwrap();
+        let raw: serde_json::Value = match serde_json::from_str(&value.json) {
+            Ok(val) => val,
+            Err(e) => {
+                error!("Error parsing JSON: '{}'::{:?}", e, value);
+                return Err(e.into());
+            }
+        };
 
         // get only the `stats` part
         if let Some(categories) = raw.get("stats").and_then(|c| c.as_object()) {

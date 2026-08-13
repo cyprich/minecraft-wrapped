@@ -2,6 +2,7 @@
 
 use anyhow::Context;
 use log::{error, info};
+use shared::PlayerSnapshot;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -11,25 +12,36 @@ async fn main() -> anyhow::Result<()> {
         .init()
         .context("Failed to initialize SimpleLogger")?;
 
-    // select snapshots from db
+    // initialize db manager
     let db_manager = db::Manager::new().await?;
+
+    // import snapshots from files, insert them to db
+    let import = false;
+    if import {
+        let raw = importer::batch("data")?;
+        let snapshots = raw
+            .into_iter()
+            .filter_map(|s| PlayerSnapshot::from_raw(s).ok())
+            .collect::<Vec<_>>();
+        db::insert_player_snapshots(&db_manager, snapshots).await?;
+    }
+
+    // select snapshots from db
     let snapshots = db::select_player_snapshots(&db_manager).await?;
     info!("Loaded {} PlayerSnapshots", snapshots.len());
 
     // render playtime chart
     let playtime = extractor::player_playtime(&snapshots);
-    if let Err(e) = charter::player_series("playtime.svg", "Playtime", &playtime) {
-        error!("Error while rendering chart: {}", e);
-    } else {
-        info!("Chart succesfully rendered");
+    match charter::player_series("playtime.svg", "Playtime", &playtime) {
+        Ok(_) => info!("Chart succesfully rendered"),
+        Err(e) => error!("Error while rendering chart: {}", e),
     }
 
     // render totems chart
     let totems = extractor::player_totems(&snapshots);
-    if let Err(e) = charter::player_series("totems.svg", "Used Totems of Undying", &totems) {
-        error!("Error while rendering chart: {}", e);
-    } else {
-        info!("Chart succesfully rendered");
+    match charter::player_series("totems.svg", "Used Totems of Undying", &totems) {
+        Ok(_) => info!("Chart succesfully rendered"),
+        Err(e) => error!("Error while rendering chart: {}", e),
     }
 
     Ok(())
