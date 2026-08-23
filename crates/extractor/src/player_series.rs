@@ -8,7 +8,7 @@ fn filter_snapshots(
     stat_name: Option<&str>,
     stat_category: Option<StatCategory>,
 ) -> Vec<PlayerSeries> {
-    // key: player uuid, value: vector of datapoints
+    // key: player, value: vector of datapoints
     let mut result: HashMap<Uuid, Vec<DataPoint>> = HashMap::new();
 
     for snapshot in snapshots {

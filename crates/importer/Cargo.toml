@@ -9,3 +9,4 @@ chrono = "0.4.45"
 log = "0.4.33"
 simple_logger = "5.2.0"
 shared = { path = "../shared/" }
+uuid = "1.24.0"

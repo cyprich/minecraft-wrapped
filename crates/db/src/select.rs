@@ -6,11 +6,11 @@ use shared::{PlayerSnapshot, StatCategory};
 use sqlx::{query_as, query_scalar};
 
 use crate::Manager;
-use crate::models::StatRow;
+use crate::models::{PlayerRow, StatRow};
 
 pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<PlayerSnapshot>> {
     // this will be needed later, but there is no need to continue if this fails
-    let players = query_as!(crate::models::Player, "select * from players")
+    let players = query_as!(PlayerRow, "select * from players")
         .fetch_all(&manager.pool)
         .await?;
     // key: id, value: uuid
@@ -44,7 +44,7 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
         stats.push(stats_chunk);
         offset += CHUNK_SIZE;
     }
-    trace!("Finally loading stats done");
+    trace!("Loading stats done");
     let stats = stats.into_iter().flatten();
 
     // key: (player_id, datetime), value = Vec<Stat { category, name, value }>
@@ -69,8 +69,6 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
             ));
     }
 
-    trace!("HashMap constructed");
-
     let result = stat_map
         .into_iter()
         .filter_map(|((player_id, datetime), stats)| {
@@ -85,7 +83,7 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
         })
         .collect::<Vec<_>>();
 
-    trace!("Returning {} stats", result.len());
+    trace!("Returning {} PlayerSnapshots", result.len());
 
     Ok(result)
 }

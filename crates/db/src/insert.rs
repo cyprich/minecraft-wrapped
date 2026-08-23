@@ -3,28 +3,51 @@ use std::collections::HashMap;
 use anyhow::Context;
 use log::{error, info};
 use shared::PlayerSnapshot;
-use sqlx::{query_as, query_scalar, types::Uuid};
+use sqlx::{query_as, types::Uuid};
 
-use crate::{Manager, models::Player};
+use crate::{Manager, models::PlayerRow};
 
-pub async fn insert_player(manager: &Manager, name: &str, uuid: &Uuid) -> anyhow::Result<i32> {
-    let id = query_scalar!(
-        "insert into players (name, uuid) values ($1, $2) returning id",
-        name,
-        uuid
-    )
-    .fetch_one(&manager.pool)
-    .await?;
+/// Inserts player to database
+pub async fn insert_player(
+    manager: &Manager,
+    uuid: &Uuid,
+    name: Option<&str>,
+    color_hex: Option<&str>,
+) -> anyhow::Result<()> {
+    let mut builder = crate::Builder::new("insert into players (uuid ");
 
-    Ok(id)
+    if name.is_some() {
+        builder.push(", name");
+    }
+    if color_hex.is_some() {
+        builder.push(", color_hex");
+    }
+
+    builder.push(" ) values ( ");
+    builder.push_bind(uuid);
+
+    if let Some(val) = name {
+        builder.push(", ");
+        builder.push_bind(val);
+    }
+    if let Some(val) = color_hex {
+        builder.push(", ");
+        builder.push_bind(val);
+    }
+
+    builder.push(" ) on conflict do nothing");
+
+    builder.build().execute(&manager.pool).await?;
+
+    Ok(())
 }
 
-// TODO: make the parameter `Vec<&PlayerStats>`?
+/// Insert player snapshots
 pub async fn insert_player_snapshots(
     manager: &Manager,
-    stats: Vec<PlayerSnapshot>,
+    snapshots: &[PlayerSnapshot],
 ) -> anyhow::Result<()> {
-    let players = query_as!(Player, "select * from players")
+    let players = query_as!(PlayerRow, "select * from players")
         .fetch_all(&manager.pool)
         .await?;
 
@@ -44,7 +67,7 @@ pub async fn insert_player_snapshots(
 
     let mut inserted = 0;
 
-    for player_stats in stats {
+    for player_stats in snapshots {
         let timestamp = player_stats.datetime;
         if let Some(id) = player_map.get(&player_stats.player_uuid) {
             for stats in player_stats.stats.chunks(CHUNK_SIZE) {

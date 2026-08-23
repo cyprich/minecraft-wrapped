@@ -1,8 +1,11 @@
 -- Add migration script here
+
+-- TODO: identify by uuid, remove id 
 create table players (
     id serial primary key not null,
-    name varchar(16) not null,
     uuid uuid not null,
+    name varchar(16),
+    color_hex char(7),
     unique (uuid)
 );
 

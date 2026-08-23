@@ -20,6 +20,7 @@ fn render_lines(path: impl AsRef<Path>, caption: &str, lines: &[Line]) -> anyhow
         return Ok(());
     }
 
+    // TODO: typst will need png/jpg
     let root = SVGBackend::new(path.as_ref(), (1920, 1080)).into_drawing_area();
     root.fill(&WHITE)?;
 

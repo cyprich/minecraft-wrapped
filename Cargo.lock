@@ -937,6 +937,7 @@ dependencies = [
  "log",
  "shared",
  "simple_logger",
+ "uuid",
 ]
 
 [[package]]

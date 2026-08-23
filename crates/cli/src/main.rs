@@ -15,15 +15,24 @@ async fn main() -> anyhow::Result<()> {
     // initialize db manager
     let db_manager = db::Manager::new().await?;
 
+    // import player UUID's from files, insert them to db
+    let import_players = true;
+    if import_players {
+        let uuids = importer::batch_players("data")?;
+        for uuid in uuids {
+            db::insert_player(&db_manager, &uuid, None, None).await?;
+        }
+    }
+
     // import snapshots from files, insert them to db
-    let import = false;
-    if import {
-        let raw = importer::batch("data")?;
+    let import_snapshots = true;
+    if import_snapshots {
+        let raw = importer::batch_snapshots("data")?;
         let snapshots = raw
             .into_iter()
             .filter_map(|s| PlayerSnapshot::from_raw(s).ok())
             .collect::<Vec<_>>();
-        db::insert_player_snapshots(&db_manager, snapshots).await?;
+        db::insert_player_snapshots(&db_manager, &snapshots).await?;
     }
 
     // select snapshots from db
