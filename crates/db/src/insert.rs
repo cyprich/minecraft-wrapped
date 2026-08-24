@@ -1,13 +1,35 @@
-use std::collections::HashMap;
-
 use anyhow::Context;
 use log::{error, trace};
 use shared::PlayerSnapshot;
-use sqlx::{query, query_as, types::Uuid};
+use sqlx::{query, query_scalar, types::Uuid};
 
-use crate::{INSERT_CHUNK_SIZE, Manager, models::PlayerRow};
+use crate::{INSERT_CHUNK_SIZE, Manager};
+
+/// Inserts Player to the database
+/// Table `players`:
+/// - id serial PK NN,
+/// - name varchar(64),
+/// - color_hex char(7)
+pub async fn insert_player(
+    manager: &Manager,
+    name: Option<&str>,
+    color_hex: Option<&str>,
+) -> anyhow::Result<i32> {
+    let id = query_scalar!(
+        "insert into players (name, color_hex) values ($1, $2) returning id",
+        name,
+        color_hex
+    )
+    .fetch_one(&manager.pool)
+    .await?;
+
+    Ok(id)
+}
 
 /// Inserts player UUID to database
+/// Table `player_uuids`:
+/// - uuid uuid PK NN,
+/// - player_id integer references players(id)
 pub async fn insert_player_uuid(manager: &Manager, uuid: &Uuid) -> anyhow::Result<()> {
     query!(
         "insert into player_uuids (uuid) values ($1) on conflict do nothing",
@@ -54,7 +76,7 @@ pub async fn insert_player_snapshots(
             if let Err(e) = result {
                 error!("Failed inserting player stats in database: {}", e);
             } else {
-                inserted += INSERT_CHUNK_SIZE;
+                inserted += stats.len();
                 trace!("Inserted {} stats", inserted);
             }
         }
