@@ -27,7 +27,7 @@ impl PlayerSnapshotJson {
 
 impl Debug for PlayerSnapshotJson {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let length = format!("{} bytes", &self.json.len());
+        let length = format!("{} bytes", self.json.len());
         f.debug_struct("RawPlayerStats")
             .field("player", &self.player_uuid)
             .field("stats", &length)

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
-use log::{error, info};
+use log::{error, trace};
 use shared::PlayerSnapshot;
 use sqlx::{query_as, types::Uuid};
 
-use crate::{Manager, models::PlayerRow};
+use crate::{INSERT_CHUNK_SIZE, Manager, models::PlayerRow};
 
 /// Inserts player to database
 pub async fn insert_player(
@@ -63,14 +63,12 @@ pub async fn insert_player_snapshots(
         .await
         .context("Failed to initiate transaction")?;
 
-    const CHUNK_SIZE: usize = 512;
-
     let mut inserted = 0;
 
     for player_stats in snapshots {
         let timestamp = player_stats.datetime;
         if let Some(id) = player_map.get(&player_stats.player_uuid) {
-            for stats in player_stats.stats.chunks(CHUNK_SIZE) {
+            for stats in player_stats.stats.chunks(INSERT_CHUNK_SIZE as usize) {
                 let mut builder = crate::Builder::new(
                     "insert into stats (player_id, timestamp, category, name, value) ",
                 );
@@ -90,8 +88,8 @@ pub async fn insert_player_snapshots(
                 if let Err(e) = result {
                     error!("Failed inserting player stats in database: {}", e);
                 } else {
-                    inserted += CHUNK_SIZE;
-                    info!("Inserted {} stats", inserted);
+                    inserted += INSERT_CHUNK_SIZE;
+                    trace!("Inserted {} stats", inserted);
                 }
             }
         } else {

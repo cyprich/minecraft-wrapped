@@ -24,6 +24,21 @@ pub use stat_category::*;
 pub use stat_value::*;
 
 pub fn str_to_uuid(value: &str) -> anyhow::Result<Uuid> {
+    // check length of value
+    let value = match value.len() {
+        // 36 = expected length
+        36 => value,
+        // less than 36 = cannot be converted
+        x if x < 36 => {
+            return Err(anyhow::Error::msg(format!(
+                "UUID too short, expected 36 characters: {}",
+                value
+            )));
+        }
+        // more than 36 = cut it to 36 and try it anyways
+        _ => &value[..36],
+    };
+
     match Uuid::parse_str(value) {
         Ok(val) => Ok(val),
         Err(e) => {

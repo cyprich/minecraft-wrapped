@@ -5,8 +5,8 @@ use log::{trace, warn};
 use shared::{PlayerSnapshot, StatCategory};
 use sqlx::{query_as, query_scalar};
 
-use crate::Manager;
 use crate::models::{PlayerRow, StatRow};
+use crate::{Manager, SELECT_CHUNK_SIZE};
 
 pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<PlayerSnapshot>> {
     // this will be needed later, but there is no need to continue if this fails
@@ -21,7 +21,6 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
     trace!("Player UUIDs: {:?}", player_uuid_from_id);
 
     let mut stats = Vec::new();
-    const CHUNK_SIZE: i64 = 2048;
     let mut offset = 0i64;
 
     let count = query_scalar!("select count(*) from stats")
@@ -30,19 +29,19 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
         .context("Failed to select count of stats")?;
     trace!("About to load {} stats", count);
 
-    while CHUNK_SIZE + offset < count {
+    while SELECT_CHUNK_SIZE + offset < count {
         let stats_chunk = query_as!(
             StatRow,
             "select * from stats limit $1 offset $2",
-            CHUNK_SIZE,
+            SELECT_CHUNK_SIZE,
             offset
         )
         .fetch_all(&manager.pool)
         .await?;
-        trace!("Got {} to {} stats", offset, offset + CHUNK_SIZE);
+        trace!("Got {} to {} stats", offset, offset + SELECT_CHUNK_SIZE);
 
         stats.push(stats_chunk);
-        offset += CHUNK_SIZE;
+        offset += SELECT_CHUNK_SIZE;
     }
     trace!("Loading stats done");
     let stats = stats.into_iter().flatten();
@@ -54,7 +53,7 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
         let category = match StatCategory::try_from_str(&stat.category) {
             Some(val) => val,
             None => {
-                warn!("Unknown category: {}", &stat.category);
+                warn!("Unknown category: {}", stat.category);
                 continue;
             }
         };

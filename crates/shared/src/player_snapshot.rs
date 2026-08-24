@@ -122,7 +122,7 @@ impl PlayerSnapshot {
 
 impl Debug for PlayerSnapshot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let length = format!("{} values", &self.stats.len());
+        let length = format!("{} values", self.stats.len());
         f.debug_struct("PlayerStats")
             .field("player_name", &self.player_uuid)
             .field("stats", &length)

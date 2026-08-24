@@ -15,7 +15,13 @@ const PLAYER_COLORS: [&RGBColor; 6] = [&RED, &GREEN, &BLUE, &CYAN, &MAGENTA, &BL
 
 /// Render Line chart with multiple lines
 /// **Expects `lines` to be sorted by datetime!**
-fn render_lines(path: impl AsRef<Path>, caption: &str, lines: &[Line]) -> anyhow::Result<()> {
+fn render_lines(
+    path: impl AsRef<Path>,
+    caption: &str,
+    lines: &[Line],
+    y_desc: &str,
+    y_unit: Option<&str>,
+) -> anyhow::Result<()> {
     if lines.is_empty() {
         return Ok(());
     }
@@ -50,11 +56,17 @@ fn render_lines(path: impl AsRef<Path>, caption: &str, lines: &[Line]) -> anyhow
         .margin(4)
         .build_cartesian_2d(x_spec, y_spec)?;
 
+    // descriptions
+    let y_desc = match y_unit {
+        Some(val) => &format!("{} [{}]", y_desc, val),
+        None => y_desc,
+    };
+
     // mesh
     ctx.configure_mesh()
         // TODO: Make these configurable
-        .x_desc("Time")
-        .y_desc("Value")
+        .x_desc("Date")
+        .y_desc(y_desc)
         .x_label_formatter(&|val| val.format("%d.%m.%Y").to_string())
         .draw()?;
 
@@ -84,6 +96,8 @@ pub fn player_series(
     path: impl AsRef<Path>,
     title: &str,
     data: &[PlayerSeries],
+    y_desc: &str,
+    y_unit: Option<&str>,
 ) -> anyhow::Result<()> {
     let mut i = 0;
 
@@ -108,7 +122,7 @@ pub fn player_series(
         })
         .collect::<Vec<_>>();
 
-    crate::render_lines(path, title, &lines)?;
+    crate::render_lines(path, title, &lines, y_desc, y_unit)?;
 
     Ok(())
 }

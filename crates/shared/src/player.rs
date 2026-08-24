@@ -1,4 +1,3 @@
-use log::error;
 use uuid::Uuid;
 
 use crate::str_to_uuid;
