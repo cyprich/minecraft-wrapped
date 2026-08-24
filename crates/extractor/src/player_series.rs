@@ -1,15 +1,14 @@
-use shared::{DataPoint, PlayerSeries, PlayerSnapshot, StatCategory};
+use shared::{DataPoint, PlayerSeries, PlayerSnapshot, Players, StatCategory};
 use std::collections::HashMap;
-
-use uuid::Uuid;
 
 fn filter_snapshots(
     snapshots: &[PlayerSnapshot],
+    players: &Players,
     stat_name: Option<&str>,
     stat_category: Option<StatCategory>,
 ) -> Vec<PlayerSeries> {
-    // key: player, value: vector of datapoints
-    let mut result: HashMap<Uuid, Vec<DataPoint>> = HashMap::new();
+    // key: player id, value: vector of datapoints
+    let mut result: HashMap<i32, Vec<DataPoint>> = HashMap::new();
 
     for snapshot in snapshots {
         // check if stat name and category matches parameters
@@ -32,7 +31,7 @@ fn filter_snapshots(
 
         // collecto into hashmap, gruped by player uuid
         result
-            .entry(snapshot.player_uuid)
+            .entry(snapshot.player_id)
             .or_default()
             .push(DataPoint::new(snapshot.datetime, stat.value))
     }
@@ -40,16 +39,26 @@ fn filter_snapshots(
     // make hashmap into vector that is returned
     result
         .into_iter()
-        .map(|(player_uuid, mut data_points)| {
+        .map(|(player_id, mut data_points)| {
             // sort by datetime
             data_points.sort_by_key(|point| point.x);
-            PlayerSeries::new(player_uuid, data_points)
+            let player = players.get_player_by_id(player_id);
+            dbg!(&player);
+            let name = match &player {
+                Some(p) => p.to_string(),
+                None => format!("#{}", player_id),
+            };
+            let color = match &player {
+                Some(p) if let Some(c) = &p.color_hex => Some(c.clone()),
+                _ => None,
+            };
+            PlayerSeries::new(&name, color, data_points)
         })
         .collect::<Vec<_>>()
 }
 
-pub fn player_playtime(snapshots: &[PlayerSnapshot]) -> Vec<PlayerSeries> {
-    let result = filter_snapshots(snapshots, Some("play_time"), None);
+pub fn player_playtime(snapshots: &[PlayerSnapshot], players: &Players) -> Vec<PlayerSeries> {
+    let result = filter_snapshots(snapshots, players, Some("play_time"), None);
 
     // convert minecraft ticks to hours
     result
@@ -64,9 +73,10 @@ pub fn player_playtime(snapshots: &[PlayerSnapshot]) -> Vec<PlayerSeries> {
         .collect()
 }
 
-pub fn player_totems(snapshots: &[PlayerSnapshot]) -> Vec<PlayerSeries> {
+pub fn player_totems(snapshots: &[PlayerSnapshot], players: &Players) -> Vec<PlayerSeries> {
     filter_snapshots(
         snapshots,
+        players,
         Some("totem_of_undying"),
         Some(StatCategory::Used),
     )

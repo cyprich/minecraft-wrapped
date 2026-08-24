@@ -2,10 +2,8 @@
 
 use std::fmt::Debug;
 
-use anyhow::Context;
 use chrono::NaiveDateTime;
 use log::{error, trace};
-use uuid::Uuid;
 
 use crate::{PlayerSnapshotJson, StatCategory, StatValue};
 
@@ -16,30 +14,27 @@ use crate::{PlayerSnapshotJson, StatCategory, StatValue};
 /// - datetime
 /// - stats - vector of `shared::StatValue`, which is actual key-value-like struct
 pub struct PlayerSnapshot {
-    pub player_uuid: Uuid,
+    pub player_id: i32,
     pub stats: Vec<StatValue>,
     pub datetime: NaiveDateTime,
 }
 
 impl PlayerSnapshot {
     pub fn new(
-        player_uuid: String,
+        player_id: i32,
         stats: Vec<StatValue>,
         datetime: NaiveDateTime,
     ) -> anyhow::Result<Self> {
-        let player_uuid = Uuid::parse_str(&player_uuid)
-            .context(format!("Failed to parse '{}' to uuid", player_uuid))?;
-
         Ok(Self {
-            player_uuid,
+            player_id,
             stats,
             datetime,
         })
     }
 
-    pub fn from_uuid(player_uuid: Uuid, stats: Vec<StatValue>, datetime: NaiveDateTime) -> Self {
+    pub fn from_uuid(player_id: i32, stats: Vec<StatValue>, datetime: NaiveDateTime) -> Self {
         Self {
-            player_uuid,
+            player_id,
             stats,
             datetime,
         }
@@ -55,7 +50,7 @@ impl PlayerSnapshot {
         // return empty
         if value.json.is_empty() {
             trace!("Returning empty PlayerSnapshot: {:?}", value);
-            return Self::new(value.player_uuid, Vec::new(), value.datetime);
+            return Self::new(value.player_id, Vec::new(), value.datetime);
         }
 
         // the json from minecraft looks something like this:
@@ -116,7 +111,7 @@ impl PlayerSnapshot {
             }
         }
 
-        Self::new(value.player_uuid, stats, value.datetime)
+        Self::new(value.player_id, stats, value.datetime)
     }
 }
 
@@ -124,7 +119,7 @@ impl Debug for PlayerSnapshot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let length = format!("{} values", self.stats.len());
         f.debug_struct("PlayerStats")
-            .field("player_name", &self.player_uuid)
+            .field("player_name", &self.player_id)
             .field("stats", &length)
             .field("datetime", &self.datetime)
             .finish()

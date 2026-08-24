@@ -2,7 +2,7 @@
 
 use anyhow::Context;
 use log::{error, info, trace};
-use shared::PlayerSnapshot;
+use shared::{PlayerSnapshot, Players};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -20,15 +20,18 @@ async fn main() -> anyhow::Result<()> {
     if import_players {
         let uuids = importer::batch_players("data")?;
         for uuid in uuids {
-            db::insert_player(&db_manager, &uuid, None, None).await?;
+            db::insert_player_uuid(&db_manager, &uuid).await?;
         }
         trace!("Players inserted")
     }
 
+    // covnert Vec<shared::Player> to shared::Players
+    let players: Players = db::select_players(&db_manager).await?.into();
+
     // import snapshots from files, insert them to db
     let import_snapshots = false;
     if import_snapshots {
-        let raw = importer::batch_snapshots("data")?;
+        let raw = importer::batch_snapshots("data", &players)?;
         let snapshots = raw
             .into_iter()
             .filter_map(|s| PlayerSnapshot::from_raw(s).ok())
@@ -42,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Loaded {} PlayerSnapshots", snapshots.len());
 
     // render playtime chart
-    let playtime = extractor::player_playtime(&snapshots);
+    let playtime = extractor::player_playtime(&snapshots, &players);
     match charter::player_series(
         "playtime.svg",
         "Playtime",
@@ -55,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // render totems chart
-    let totems = extractor::player_totems(&snapshots);
+    let totems = extractor::player_totems(&snapshots, &players);
     match charter::player_series(
         "totems.svg",
         "Used Totems of Undying",

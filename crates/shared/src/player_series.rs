@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 use crate::DataPoint;
 
 /// PlayerSeries represents stats of certain category and value for one player  
@@ -10,14 +8,20 @@ use crate::DataPoint;
 ///
 /// This struct is mainly returned by functions in `extractor` crate
 pub struct PlayerSeries {
-    pub player_uuid: Uuid,
+    pub player_display_name: String,
+    pub player_color: Option<String>,
     pub data_points: Vec<DataPoint>,
 }
 
 impl PlayerSeries {
-    pub fn new(player_uuid: Uuid, data_points: Vec<DataPoint>) -> Self {
+    pub fn new(
+        player_display_name: &str,
+        player_color: Option<String>,
+        data_points: Vec<DataPoint>,
+    ) -> Self {
         Self {
-            player_uuid,
+            player_display_name: player_display_name.to_string(),
+            player_color,
             data_points,
         }
     }

@@ -10,15 +10,15 @@ use std::fmt::Debug;
 /// - datetime
 /// - raw JSON stats in String, which needs to be converted to `shared::StatValue`
 pub struct PlayerSnapshotJson {
-    pub player_uuid: String,
+    pub player_id: i32,
     pub json: String,
     pub datetime: NaiveDateTime,
 }
 
 impl PlayerSnapshotJson {
-    pub fn new(player_uuid: String, json: String, datetime: NaiveDateTime) -> Self {
+    pub fn new(player_id: i32, json: String, datetime: NaiveDateTime) -> Self {
         Self {
-            player_uuid,
+            player_id,
             json,
             datetime,
         }
@@ -29,7 +29,7 @@ impl Debug for PlayerSnapshotJson {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let length = format!("{} bytes", self.json.len());
         f.debug_struct("RawPlayerStats")
-            .field("player", &self.player_uuid)
+            .field("player", &self.player_id)
             .field("stats", &length)
             .field("datetime", &self.datetime)
             .finish()

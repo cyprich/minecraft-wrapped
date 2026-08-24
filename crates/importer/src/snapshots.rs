@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use anyhow::Context;
 use log::{error, warn};
-use shared::{DATETIME_FORMAT_DISPLAY, PlayerSnapshotJson};
+use shared::{DATETIME_FORMAT_DISPLAY, PlayerSnapshotJson, Players, str_to_uuid};
 
 /// Reads snapshots of multiple players from *multiple days*
 ///
@@ -19,7 +19,10 @@ use shared::{DATETIME_FORMAT_DISPLAY, PlayerSnapshotJson};
 /// │   └── uuid3.json
 /// └── ...
 /// ```
-pub fn batch_snapshots(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSnapshotJson>> {
+pub fn batch_snapshots(
+    folder: impl AsRef<Path>,
+    players: &Players,
+) -> anyhow::Result<Vec<PlayerSnapshotJson>> {
     let folder = folder.as_ref();
 
     if !fs::exists(folder).unwrap_or(false) {
@@ -48,7 +51,7 @@ pub fn batch_snapshots(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSna
         })
         .filter_map(|f| {
             // read contents
-            let result = crate::simple_snapshots(f.path());
+            let result = crate::simple_snapshots(f.path(), players);
             match result {
                 Ok(val) => Some(val),
                 Err(e) => {
@@ -72,7 +75,10 @@ pub fn batch_snapshots(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSna
 /// ├── uuid2.json
 /// └── uuid3.json
 /// ```
-pub fn simple_snapshots(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSnapshotJson>> {
+pub fn simple_snapshots(
+    folder: impl AsRef<Path>,
+    players: &Players,
+) -> anyhow::Result<Vec<PlayerSnapshotJson>> {
     let folder = folder.as_ref();
 
     // check if folder exists
@@ -119,17 +125,24 @@ pub fn simple_snapshots(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSn
         .filter_map(|f| {
             let path = f.path();
 
-            // extract player name
-            let player_name = path.file_stem().and_then(|s| s.to_str());
-            let player_name = if let Some(val) = player_name {
-                val.to_string()
+            // extract player uuid
+            let player_uuid = path.file_stem().and_then(|s| s.to_str());
+            let player_uuid = if let Some(val) = player_uuid {
+                match str_to_uuid(val) {
+                    // try to convert &str to UUID
+                    Ok(val) => Some(val),
+                    Err(e) => {
+                        error!("Failed to parse String '{}' to UUID : {}", val, e);
+                        return None;
+                    }
+                }
             } else {
                 error!(
                     "Failed to extract player name from '{}'",
                     f.path().display()
                 );
                 return None;
-            };
+            }?;
 
             // extract stats (content of json file)
             let stats = fs::read_to_string(path);
@@ -143,10 +156,21 @@ pub fn simple_snapshots(folder: impl AsRef<Path>) -> anyhow::Result<Vec<PlayerSn
             // TODO: this might cause problems later (serde), idk
             let stats = stats.replace("\n", "").replace(" ", "");
 
-            Some((stats, player_name))
+            Some((stats, player_uuid))
         })
-        // construct RawPlayerStats
-        .map(|(stats, player_name)| PlayerSnapshotJson::new(player_name, stats, datetime))
+        // construct PlayerSnapshotJson
+        .filter_map(|(stats, player_uuid)| {
+            // try to find player ID by UUID
+            let player_id = match players.get_id_by_uuid(&player_uuid) {
+                Some(val) => val,
+                None => {
+                    error!("Couldn't find Player ID for UUID '{}'", player_uuid);
+                    return None;
+                }
+            };
+            let result = PlayerSnapshotJson::new(player_id, stats, datetime);
+            Some(result)
+        })
         .collect::<Vec<_>>();
 
     Ok(result)

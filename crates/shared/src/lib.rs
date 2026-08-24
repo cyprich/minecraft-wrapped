@@ -12,6 +12,7 @@ mod player;
 mod player_series;
 mod player_snapshot;
 mod player_snapshot_json;
+mod players;
 mod stat_category;
 mod stat_value;
 
@@ -20,6 +21,7 @@ pub use player::*;
 pub use player_series::*;
 pub use player_snapshot::*;
 pub use player_snapshot_json::*;
+pub use players::*;
 pub use stat_category::*;
 pub use stat_value::*;
 
@@ -46,4 +48,20 @@ pub fn str_to_uuid(value: &str) -> anyhow::Result<Uuid> {
             Err(e.into())
         }
     }
+}
+
+pub fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
+    let stripped = hex.strip_prefix("#").unwrap_or(hex);
+
+    if stripped.len() != 6 {
+        error!("Invalid HEX value: {}", hex);
+        return None;
+    };
+
+    // parse from base 16
+    let r = u8::from_str_radix(&stripped[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&stripped[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&stripped[4..6], 16).ok()?;
+
+    Some((r, g, b))
 }

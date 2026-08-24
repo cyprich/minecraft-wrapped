@@ -4,14 +4,14 @@ use std::path::Path;
 
 use chrono::NaiveDateTime;
 use plotters::prelude::*;
-use shared::PlayerSeries;
+use shared::{PlayerSeries, hex_to_rgb};
 
 use crate::models::Line;
 
 mod models;
 
 // TODO: temp
-const PLAYER_COLORS: [&RGBColor; 6] = [&RED, &GREEN, &BLUE, &CYAN, &MAGENTA, &BLACK];
+const RANDOM_COLORS: [&RGBColor; 6] = [&RED, &GREEN, &BLUE, &CYAN, &MAGENTA, &BLACK];
 
 /// Render Line chart with multiple lines
 /// **Expects `lines` to be sorted by datetime!**
@@ -104,14 +104,21 @@ pub fn player_series(
     let lines = data
         .iter()
         .map(|data| {
-            let description = format!("player {}", data.player_uuid);
+            let description = format!("Player {}", data.player_display_name);
             let data_points = data.data_points.iter().map(|p| (p.x, p.y as f64)).collect();
+            let color = if let Some(hex) = &data.player_color
+                && let Some((r, g, b)) = hex_to_rgb(hex)
+            {
+                RGBColor(r, g, b)
+            } else {
+                *RANDOM_COLORS[i % RANDOM_COLORS.len()]
+            };
 
             let result = Line::new(
                 data_points,
                 &description,
                 ShapeStyle {
-                    color: (*PLAYER_COLORS[i % PLAYER_COLORS.len()]).into(),
+                    color: color.into(),
                     filled: true,
                     stroke_width: 2,
                 },

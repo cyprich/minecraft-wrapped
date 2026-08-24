@@ -1,16 +1,19 @@
 -- Add migration script here
 
--- TODO: identify by uuid, remove id 
 create table players (
     id serial primary key not null,
-    uuid uuid not null,
-    name varchar(16),
+    name varchar(64), 
     color_hex char(7),
-    unique (uuid)
+    unique(name) 
+);
+
+create table player_uuids (
+    uuid uuid not null primary key, 
+    player_id integer references players(id), 
 );
 
 create table stats (
-    player_id integer not null,
+    player_id integer not null references players(id),
     timestamp timestamp not null,
     category varchar not null,
     name varchar not null,

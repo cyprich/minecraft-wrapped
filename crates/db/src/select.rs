@@ -2,24 +2,42 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use log::{trace, warn};
-use shared::{PlayerSnapshot, StatCategory};
+use shared::{Player, PlayerSnapshot, StatCategory};
 use sqlx::{query_as, query_scalar};
 
-use crate::models::{PlayerRow, StatRow};
+use crate::models::{PlayerRow, PlayerUuidRow, StatRow};
 use crate::{Manager, SELECT_CHUNK_SIZE};
 
-pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<PlayerSnapshot>> {
-    // this will be needed later, but there is no need to continue if this fails
+pub async fn select_players(manager: &Manager) -> anyhow::Result<Vec<Player>> {
     let players = query_as!(PlayerRow, "select * from players")
         .fetch_all(&manager.pool)
         .await?;
-    // key: id, value: uuid
-    let mut player_uuid_from_id = HashMap::new();
-    players.into_iter().for_each(|p| {
-        player_uuid_from_id.entry(p.id).or_insert(p.uuid);
-    });
-    trace!("Player UUIDs: {:?}", player_uuid_from_id);
 
+    let uuids = query_as!(
+        PlayerUuidRow,
+        "select * from player_uuids where player_id is not null"
+    )
+    .fetch_all(&manager.pool)
+    .await?;
+
+    let mut players = players
+        .into_iter()
+        .map(|p| p.into_player())
+        .collect::<Vec<_>>();
+
+    for p in &mut players {
+        for u in &uuids {
+            if u.player_id.unwrap() == p.id {
+                p.uuids.push(u.uuid)
+            }
+        }
+    }
+
+    Ok(players)
+}
+
+/// select player snapshots
+pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<PlayerSnapshot>> {
     let mut stats = Vec::new();
     let mut offset = 0i64;
 
@@ -46,6 +64,7 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
     trace!("Loading stats done");
     let stats = stats.into_iter().flatten();
 
+    // group by player id and date
     // key: (player_id, datetime), value = Vec<Stat { category, name, value }>
     let mut stat_map = HashMap::new();
 
@@ -71,14 +90,8 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
     let result = stat_map
         .into_iter()
         .filter_map(|((player_id, datetime), stats)| {
-            let uuid = match player_uuid_from_id.get(&player_id) {
-                Some(val) => val,
-                None => {
-                    warn!("Player ID {} not found", player_id);
-                    return None;
-                }
-            };
-            Some(PlayerSnapshot::from_uuid(*uuid, stats, datetime))
+            let result = PlayerSnapshot::new(player_id, stats, datetime).ok()?;
+            Some(result)
         })
         .collect::<Vec<_>>();
 
