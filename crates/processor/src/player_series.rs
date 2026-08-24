@@ -43,10 +43,9 @@ fn filter_snapshots(
             // sort by datetime
             data_points.sort_by_key(|point| point.x);
             let player = players.get_player_by_id(player_id);
-            dbg!(&player);
             let name = match &player {
                 Some(p) => p.to_string(),
-                None => format!("#{}", player_id),
+                None => format!("Player #{}", player_id),
             };
             let color = match &player {
                 Some(p) if let Some(c) = &p.color_hex => Some(c.clone()),

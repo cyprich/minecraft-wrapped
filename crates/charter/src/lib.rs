@@ -104,7 +104,6 @@ pub fn player_series(
     let lines = data
         .iter()
         .map(|data| {
-            let description = format!("Player {}", data.player_display_name);
             let data_points = data.data_points.iter().map(|p| (p.x, p.y as f64)).collect();
             let color = if let Some(hex) = &data.player_color
                 && let Some((r, g, b)) = hex_to_rgb(hex)
@@ -116,7 +115,7 @@ pub fn player_series(
 
             let result = Line::new(
                 data_points,
-                &description,
+                &data.player_display_name,
                 ShapeStyle {
                     color: color.into(),
                     filled: true,

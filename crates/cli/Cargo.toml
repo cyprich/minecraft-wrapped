@@ -9,9 +9,10 @@ importer = { path = "../importer/" }
 shared = { path = "../shared/" }
 db = { path = "../db/" }
 charter = { path = "../charter/" }
-extractor = { path = "../extractor/" }
+processor = { path = "../processor/" }
 # external libraries
 anyhow = "1.0.104"
 log = "0.4.33"
 simple_logger = "5.2.0"
 tokio = { version = "1.53.1", features = ["full"] }
+chrono = "0.4.45"

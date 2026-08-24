@@ -164,10 +164,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "charter",
+ "chrono",
  "db",
- "extractor",
  "importer",
  "log",
+ "processor",
  "shared",
  "simple_logger",
  "tokio",
@@ -476,16 +477,6 @@ checksum = "5a23add41df1562121a9393cb065eab5146a1242410f23a644851e90cfd669d2"
 dependencies = [
  "parking",
  "pin-project-lite",
-]
-
-[[package]]
-name = "extractor"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "shared",
- "uuid",
 ]
 
 [[package]]
@@ -1255,6 +1246,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "processor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "shared",
+ "uuid",
 ]
 
 [[package]]

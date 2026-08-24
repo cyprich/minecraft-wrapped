@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::Context;
 use log::{trace, warn};
 use shared::{Player, PlayerSnapshot, StatCategory};
 use sqlx::{query_as, query_scalar};
@@ -44,10 +43,32 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
     let count = query_scalar!("select count(*) from stats")
         .fetch_one(&manager.pool)
         .await?
-        .context("Failed to select count of stats")?;
+        .unwrap();
     trace!("About to load {} stats", count);
 
-    while SELECT_CHUNK_SIZE + offset < count {
+    while offset < count {
+        // let mut builder = Builder::new("select * from stats where 1=1 ");
+        //
+        // if let Some(date) = min_date {
+        //     builder.push(" and timestamp > ");
+        //     builder.push_bind(date);
+        // }
+        //
+        // if let Some(date) = max_date {
+        //     builder.push(" and timestamp < ");
+        //     builder.push_bind(date);
+        // }
+        //
+        // builder.push(" limit ");
+        // builder.push_bind(SELECT_CHUNK_SIZE);
+        // builder.push(" offset ");
+        // builder.push_bind(offset);
+        //
+        // let stats_chunk = builder
+        //     .build_query_as::<StatRow>()
+        //     .fetch_all(&manager.pool)
+        //     .await?;
+
         let stats_chunk = query_as!(
             StatRow,
             "select * from stats limit $1 offset $2",
@@ -56,6 +77,7 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
         )
         .fetch_all(&manager.pool)
         .await?;
+
         trace!("Got {} to {} stats", offset, offset + SELECT_CHUNK_SIZE);
 
         stats.push(stats_chunk);
@@ -87,13 +109,14 @@ pub async fn select_player_snapshots(manager: &Manager) -> anyhow::Result<Vec<Pl
             ));
     }
 
-    let result = stat_map
+    let mut result = stat_map
         .into_iter()
         .filter_map(|((player_id, datetime), stats)| {
             let result = PlayerSnapshot::new(player_id, stats, datetime).ok()?;
             Some(result)
         })
         .collect::<Vec<_>>();
+    result.sort_unstable_by_key(|s| (s.player_id, s.datetime));
 
     trace!("Returning {} PlayerSnapshots", result.len());
 

@@ -2,6 +2,7 @@
 
 use anyhow::Context;
 use log::{error, info, trace};
+use processor::fix_uuid_reset;
 use shared::{PlayerSnapshot, Players};
 
 #[tokio::main]
@@ -25,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         trace!("Players inserted")
     }
 
-    // covnert Vec<shared::Player> to shared::Players
+    // convert Vec<shared::Player> to shared::Players
     let players: Players = db::select_players(&db_manager).await?.into();
 
     // import snapshots from files, insert them to db
@@ -41,11 +42,12 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // select snapshots from db
-    let snapshots = db::select_player_snapshots(&db_manager).await?;
+    let mut snapshots = db::select_player_snapshots(&db_manager).await?;
+    fix_uuid_reset(&mut snapshots);
     info!("Loaded {} PlayerSnapshots", snapshots.len());
 
     // render playtime chart
-    let playtime = extractor::player_playtime(&snapshots, &players);
+    let playtime = processor::player_playtime(&snapshots, &players);
     match charter::player_series(
         "playtime.svg",
         "Playtime",
@@ -58,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // render totems chart
-    let totems = extractor::player_totems(&snapshots, &players);
+    let totems = processor::player_totems(&snapshots, &players);
     match charter::player_series(
         "totems.svg",
         "Used Totems of Undying",
